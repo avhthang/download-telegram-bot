@@ -213,6 +213,11 @@ def validate_environment() -> None:
 
 def main() -> None:
     validate_environment()
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.ALL, handle_message))
