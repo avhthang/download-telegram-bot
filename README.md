@@ -4,6 +4,22 @@ Bot Telegram nhận link video trong nhóm/chat, tải video bằng `yt-dlp` v�
 
 > Chỉ dùng bot cho nội dung bạn có quyền tải và chia sẻ. Bot không vượt DRM; các website phim/streaming có DRM, chặn bot, hoặc yêu cầu tài khoản có thể không tải được.
 
+## Cài đặt nhanh trên VPS Ubuntu (khuyên dùng)
+
+Script `install.sh` tự cài mọi thứ: swap (nếu RAM ít), Python, ffmpeg, Docker, Local Bot API Server (upload tới 2,000 MB), bot chạy nền bằng systemd. Script sẽ hỏi bot token, `api_id`/`api_hash` (lấy tại [my.telegram.org/apps](https://my.telegram.org/apps)), channel kho và các nhóm được phép.
+
+```bash
+git clone https://github.com/avhthang/download-telegram-bot.git
+cd download-telegram-bot
+sudo bash install.sh
+```
+
+Cập nhật sau này: `git pull && sudo bash install.sh` (các giá trị cũ được giữ làm mặc định, chỉ cần nhấn Enter).
+
+Bot được cài vào `/opt/download-telegram-bot`, Local Bot API Server ở `/opt/telegram-bot-api`. Xem log: `journalctl -u telegram-video-bot -f`.
+
+Phần dưới đây là hướng dẫn cài thủ công.
+
 ## Yêu cầu
 
 - Python 3.10+
