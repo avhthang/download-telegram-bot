@@ -1,6 +1,6 @@
 # Telegram Video Downloader Bot
 
-Bot Telegram nhận link video trong nhóm/chat, tải video bằng `yt-dlp` với chất lượng cao nhất có thể, gửi lại vào nhóm, rồi xóa file tạm trên VPS.
+Bot Telegram nhận link video trong nhóm/chat, tải video bằng `yt-dlp` với chất lượng cao nhất có thể, gửi lại vào nhóm, rồi xóa file tạm trên VPS. Có thể dùng một channel riêng làm kho video: bot upload bản gốc vào channel, ghi nhớ URL và message ID, rồi copy nội bộ từ channel về nhóm.
 
 > Chỉ dùng bot cho nội dung bạn có quyền tải và chia sẻ. Bot không vượt DRM; các website phim/streaming có DRM, chặn bot, hoặc yêu cầu tài khoản có thể không tải được.
 
@@ -32,7 +32,7 @@ Sửa `.env`:
 
 ```env
 TELEGRAM_BOT_TOKEN=token-cua-ban
-MAX_FILE_SIZE_MB=1900
+MAX_FILE_SIZE_MB=49
 ```
 
 Nếu chỉ muốn bot hoạt động trong một vài nhóm:
@@ -42,6 +42,40 @@ ALLOWED_CHAT_IDS=-1001234567890,-1009876543210
 ```
 
 Lấy chat id bằng cách thêm bot vào nhóm, gửi một tin nhắn, rồi xem log hoặc dùng các bot lấy ID.
+
+## Dùng channel làm kho video
+
+1. Tạo một channel riêng, nên để private nếu chỉ dùng làm kho.
+2. Thêm bot làm admin của channel và cấp quyền đăng bài.
+3. Thêm cấu hình sau vào `.env`:
+
+```env
+STORAGE_CHAT_ID=-1001234567890
+STORAGE_CACHE_DB=/opt/download-telegram-bot/storage-cache.sqlite3
+```
+
+`STORAGE_CHAT_ID` có thể là numeric ID của private channel hoặc `@username` của channel có username. Khi bật cấu hình này, bot sẽ:
+
+- Lưu file tải lần đầu trong channel.
+- Copy chính message đó về nhóm, nên không upload lần hai.
+- Lưu URL và `message_id` vào SQLite. Khi người dùng gửi lại đúng URL, bot chỉ copy từ kho Telegram mà không tải lại video.
+- Xóa file tạm khỏi VPS ngay sau khi Telegram nhận file.
+
+Channel là nơi lưu tiện dụng, không phải backup duy nhất: không nên xóa các bài trong channel, và vẫn nên giữ nguồn/backup quan trọng ở nơi khác.
+
+## File lớn hơn 50 MB: Local Bot API Server
+
+Bot API tiêu chuẩn của Telegram hiện chỉ cho bot upload video/document tối đa 50 MB. Channel kho **không** tự tăng giới hạn này. Muốn upload tối đa 2,000 MB, cần chạy [Local Bot API Server của Telegram](https://core.telegram.org/bots/api#using-a-local-bot-api-server) ngay trên VPS; Telegram xác nhận local server cho phép upload tới 2,000 MB.
+
+Sau khi Local Bot API Server đã chạy trên VPS ở port `8081`, cập nhật `.env`:
+
+```env
+MAX_FILE_SIZE_MB=1900
+TELEGRAM_API_BASE_URL=http://127.0.0.1:8081/bot
+TELEGRAM_API_BASE_FILE_URL=http://127.0.0.1:8081/file/bot
+```
+
+Local Bot API Server yêu cầu `api_id` và `api_hash` của tài khoản Telegram developer, không phải bot token. Tạo chúng tại [my.telegram.org](https://my.telegram.org/apps), rồi cài và chạy server theo [hướng dẫn chính thức](https://github.com/tdlib/telegram-bot-api). Không mở port `8081` ra Internet; chỉ để bot trên cùng VPS truy cập qua `127.0.0.1`.
 
 ## Chạy bot
 
@@ -104,5 +138,5 @@ sudo journalctl -u telegram-video-bot -f
 ## Ghi chú vận hành
 
 - File tải về được lưu trong thư mục tạm dưới `DOWNLOAD_DIR` và luôn được xóa trong bước `finally`.
-- `MAX_FILE_SIZE_MB` nên đặt theo giới hạn upload Telegram/Bot API và dung lượng VPS của bạn.
+- Dùng Bot API tiêu chuẩn: đặt `MAX_FILE_SIZE_MB=49`. Dùng Local Bot API Server: đặt tối đa `1900` để chừa biên an toàn dưới 2 GB.
 - Muốn tải chất lượng cao nhất ổn định cần cài `ffmpeg`, vì nhiều nền tảng tách video và audio thành hai luồng.
