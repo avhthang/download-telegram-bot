@@ -143,10 +143,44 @@ done
 
 if [[ "$USE_LOCAL_API" == Y ]]; then MAX_SIZE=1900; else MAX_SIZE=49; fi
 
+port_in_use() { ss -ltnH "sport = :$1" 2>/dev/null | grep -q .; }
+
+if [[ "$USE_LOCAL_API" == Y ]]; then
+  # Giải phóng port của container cũ do chính script này tạo, để không bị tính là xung đột.
+  if command -v docker >/dev/null; then
+    docker rm -f telegram-bot-api >/dev/null 2>&1 || true
+  fi
+  old_url="$(env_get "$OLD_ENV" TELEGRAM_API_BASE_URL)"
+  old_port="$(sed -n 's#.*127\.0\.0\.1:\([0-9]*\)/.*#\1#p' <<<"$old_url")"
+  API_PORT="${old_port:-$API_PORT}"
+  if port_in_use "$API_PORT"; then
+    echo
+    warn "Port $API_PORT đã bị chương trình khác dùng:"
+    ss -ltnpH "sport = :$API_PORT" | sed 's/^/    /'
+    if ss -ltnpH "sport = :$API_PORT" | grep -qi 'telegram'; then
+      warn "Có vẻ đã có một Telegram Bot API Server khác đang chạy (cài tay trước đó?)."
+      warn "Hai server cùng dùng một bot sẽ xung đột; nên tắt server cũ sau khi cài xong."
+    fi
+    free_port="$API_PORT"
+    while port_in_use "$free_port"; do free_port=$((free_port + 1)); done
+    while true; do
+      ask API_PORT "Port cho Local Bot API Server" "$free_port"
+      if [[ ! "$API_PORT" =~ ^[0-9]+$ ]] || (( API_PORT < 1024 || API_PORT > 65535 )); then
+        warn "Port phải là số từ 1024 đến 65535."
+      elif port_in_use "$API_PORT"; then
+        warn "Port $API_PORT cũng đang bị dùng."
+      else
+        break
+      fi
+    done
+  fi
+fi
+
 echo
 echo "====================================================="
 echo " Bot token        : ${BOT_TOKEN%%:*}:***"
 echo " Local Bot API    : $USE_LOCAL_API"
+if [[ "$USE_LOCAL_API" == Y ]]; then echo " Port Bot API     : 127.0.0.1:$API_PORT"; fi
 echo " Giới hạn file    : $MAX_SIZE MB"
 echo " Channel kho      : ${STORAGE_CHAT_ID:-(không dùng)}"
 echo " Nhóm được phép   : ${ALLOWED_CHAT_IDS:-(tất cả)}"
