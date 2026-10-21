@@ -49,6 +49,8 @@ Sửa `.env`:
 ```env
 TELEGRAM_BOT_TOKEN=token-cua-ban
 MAX_FILE_SIZE_MB=49
+VIDEO_ASPECT_MODE=16:9
+DELETE_ORIGINAL_AFTER_SECONDS=86400
 ```
 
 Nếu chỉ muốn bot hoạt động trong một vài nhóm:
@@ -58,6 +60,26 @@ ALLOWED_CHAT_IDS=-1001234567890,-1009876543210
 ```
 
 Lấy chat id bằng cách thêm bot vào nhóm, gửi một tin nhắn, rồi xem log hoặc dùng các bot lấy ID.
+
+## Tỷ lệ video và dọn tin nhắn
+
+Mặc định bot chuẩn hóa video trước khi gửi thành MP4/H.264 với khung 16:9. Nội dung không bị kéo giãn hoặc crop: video 4:3 sẽ được giữ nguyên hình và thêm viền đen hai bên. Cách này tránh Telegram hiển thị sai thành 4:3 do codec hoặc metadata aspect ratio.
+
+```env
+# Giữ đúng tỷ lệ gốc, không chuyển mã:
+# VIDEO_ASPECT_MODE=source
+
+# Mặc định: luôn xuất khung 16:9, không crop/kéo giãn.
+VIDEO_ASPECT_MODE=16:9
+```
+
+Sau khi tải và gửi thành công, bot lên lịch xóa tin nhắn link gốc sau 24 giờ. Bot cần là admin trong group và có quyền **Delete messages**:
+
+```env
+DELETE_ORIGINAL_AFTER_SECONDS=86400
+```
+
+Đặt giá trị `0` để tắt tự xóa. Lịch xóa được lưu trong SQLite, nên bot restart vẫn tiếp tục xử lý các tin nhắn đã đến hạn.
 
 ## Dùng channel làm kho video
 
